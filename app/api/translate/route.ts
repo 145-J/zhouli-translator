@@ -176,6 +176,99 @@ function cleanGeneratedText(value: string) {
     .trim();
 }
 
+function isDirectedSecondPersonAttackInput(text: string) {
+  const hasFirstToSecondPerson =
+    /(^\s*我|我想|我要|我会|我准备|我打算).{0,18}(你|你的|你们|您|贵方)/.test(
+      text,
+    );
+  const hasAttackSignal =
+    /(死|杀|打|弄|操|干|骂|喷|怼|草|艹|妈|母|全家|傻|滚|去死)/.test(
+      text,
+    );
+  return hasFirstToSecondPerson && hasAttackSignal;
+}
+
+function hasDirectedAttackPerspectiveError(result: string) {
+  return /你出言粗鄙|阁下说出|阁下开口|阁下这番话|你骂了我|你伤了我|对方骂我|被无礼之言所伤|你以禽兽之名相辱|以禽兽之名相辱|你把.{0,16}话|你却将|你却把|对人父母出言不逊|先问自己|我可曾|开口的人自己失礼|失礼的是我|我乱了本心|我该退后一步|我该重新想想|我分寸守不住|三省吾身/.test(
+    result,
+  );
+}
+
+function directedAttackFallback(text: string, level: ZhouliLevel) {
+  const familyClause = /(妈|母|父|爹|娘|爸|亲族|全家)/.test(text)
+    ? "父母亲族之名，本不该被卷入口角。"
+    : "人身安危之事，本不该被拿来当口角筹码。";
+
+  if (level === "light") {
+    return `我今日有怒，并非无端。只是眼前这番争执，已经越过人与人相处的分寸。${familyClause}我把这怒意收成一句：此事若还讲礼数，就该到此为止。`;
+  }
+
+  if (level === "grand") {
+    return `我今日有怒，并非无端。人与人相处，最怕一时口角越过分寸，把原本该讲清的事，变成彼此失礼的争斗。${familyClause}若按礼法来看，怒气可以有，名分不能乱；争执可以起，体面不能尽失。好比席间杯盏相碰，本是寻常声响，若有人借此掀翻整张筵席，便不是争胜，而是乱了席位。如今这番局面，已经到了该收束的时候。我把话说清：此事若还要留一点礼数，就该止于此处。`;
+  }
+
+  return `我今日有怒，并非无端。人与人相处，最怕一时口角越过分寸。${familyClause}若按礼法来看，怒气可以有，名分不能乱；争执可以起，体面不能尽失。我把话说清：此事若还要留一点礼数，就该止于此处。`;
+}
+
+function normalizeDirectedAttackResult(
+  text: string,
+  result: string,
+  level: ZhouliLevel,
+) {
+  if (
+    isDirectedSecondPersonAttackInput(text) &&
+    hasDirectedAttackPerspectiveError(result)
+  ) {
+    return directedAttackFallback(text, level);
+  }
+
+  return result;
+}
+
+function isFirstPersonWorkThanksInput(text: string) {
+  const mentionsMyWork =
+    /(我做|我建|我造|我发|我的).{0,30}(网站|网页|视频|作品|工具|项目|应用|skill|Skill)|观众感谢我|别人夸我|粉丝夸我|用户感谢我/.test(
+      text,
+    );
+  const asksForReply = /(感谢我|夸我|如何回复|怎么回复|怎么说|如何说)/.test(
+    text,
+  );
+  return mentionsMyWork && asksForReply;
+}
+
+function hasFirstPersonWorkPerspectiveError(result: string) {
+  return /你做网站|你做了|您做了|你建了|您建了|你造了|您造了|你发了|您发了|你若|你安了心|他们来谢|大家感谢你|观众感谢你|粉丝感谢你/.test(
+    result,
+  );
+}
+
+function firstPersonWorkThanksFallback(level: ZhouliLevel) {
+  if (level === "light") {
+    return "我做此物，本是想让它有一点用处。诸位愿意来看、愿意称谢，便是给了它体面。我只回一句：不敢当，诸位用得上，就是它最好的本分。";
+  }
+
+  if (level === "grand") {
+    return "我做此物，本不是为了让众人把名分都归到我身上，只是想把一点可用的东西摆到席间，让需要的人伸手便能取用。如今诸位愿意来看，又肯相谢，这份情分我自然记在心里。可若我坦然独受，便好像席上端来一壶酒，却忘了同席的人也都出了兴致。所以我只宜这样回应：不敢当，诸位用得上，便是此物最大的本分；若觉得有趣，也请转告同好，让这点小礼多走几步。这样既接住了谢意，也把体面还给了众人。";
+  }
+
+  return "我做这个网站，本是想让一点礼数变成人人都能取用的小器物。如今诸位愿意来看，又肯相谢，这份情分我自然记在心里。若要回复，我只说：不敢当，诸位用得上，便是这网站最好的本分；若觉得有趣，也请转告同好，让这点小礼多走几步。";
+}
+
+function normalizeFirstPersonWorkResult(
+  text: string,
+  result: string,
+  level: ZhouliLevel,
+) {
+  if (
+    isFirstPersonWorkThanksInput(text) &&
+    hasFirstPersonWorkPerspectiveError(result)
+  ) {
+    return firstPersonWorkThanksFallback(level);
+  }
+
+  return result;
+}
+
 function wait(ms: number) {
   return new Promise((resolve) => {
     setTimeout(resolve, ms);
@@ -271,6 +364,19 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  if (isDirectedSecondPersonAttackInput(text)) {
+    return NextResponse.json({
+      result: directedAttackFallback(text, level),
+      model: "礼官校订",
+      demo: false,
+      guarded: true,
+      remaining: rate.remaining,
+      windowRemaining: rate.windowRemaining,
+      dailyRemaining: rate.dailyRemaining,
+      retryAfterSeconds: rate.retryAfterSeconds,
+    });
+  }
+
   const apiKey = process.env.DEEPSEEK_API_KEY;
 
   if (!apiKey) {
@@ -287,15 +393,15 @@ export async function POST(request: NextRequest) {
 
   try {
     const response = await fetchDeepSeekWithRetry(apiKey, {
-        model: process.env.DEEPSEEK_MODEL || "deepseek-v4-flash",
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content: buildUserPrompt(text, mode, level) },
-        ],
-        max_tokens: Number(process.env.MAX_OUTPUT_TOKENS || 720),
-        temperature: 0.9,
-        stream: false,
-        thinking: { type: "disabled" },
+      model: process.env.DEEPSEEK_MODEL || "deepseek-v4-flash",
+      messages: [
+        { role: "system", content: SYSTEM_PROMPT },
+        { role: "user", content: buildUserPrompt(text, mode, level) },
+      ],
+      max_tokens: Number(process.env.MAX_OUTPUT_TOKENS || 720),
+      temperature: 0.9,
+      stream: false,
+      thinking: { type: "disabled" },
     });
 
     const data = await response.json();
@@ -308,8 +414,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const result = cleanGeneratedText(
+    const cleanedResult = cleanGeneratedText(
       data?.choices?.[0]?.message?.content?.trim() || "",
+    );
+    const result = normalizeFirstPersonWorkResult(
+      text,
+      normalizeDirectedAttackResult(text, cleanedResult, level),
+      level,
     );
 
     if (!result) {
