@@ -1,20 +1,81 @@
 # 合乎周礼
 
-把寻常的话，翻译成“大周礼时代”流行的白话翻译腔。在线版本：
-[hehuzhouli.com](https://hehuzhouli.com)。
+<p align="center">
+  <strong>把寻常的话，翻译成一本正经、略显荒唐、但又有礼有据的周礼白话翻译腔。</strong>
+</p>
 
-这个仓库包含网站源码、DeepSeek 调用逻辑、提示词构造方式，以及可下载的
-`speak-zhouli` Skill 包。仓库中不包含真实 API Key、私有日志或线上账号凭据。
+<p align="center">
+  <a href="https://hehuzhouli.com">在线体验</a>
+  ·
+  <a href="#quick-start">快速开始</a>
+  ·
+  <a href="#speak-zhouli-skill">下载 Skill</a>
+  ·
+  <a href="#deployment">部署</a>
+</p>
 
-## 功能
+<p align="center">
+  <img alt="License" src="https://img.shields.io/badge/license-MIT-black">
+  <img alt="Next.js" src="https://img.shields.io/badge/Next.js-16-black">
+  <img alt="React" src="https://img.shields.io/badge/React-19-149eca">
+  <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-5-3178c6">
+  <img alt="Cloudflare Workers" src="https://img.shields.io/badge/Cloudflare-Workers-f38020">
+</p>
 
-- 输入现代中文，生成“小礼 / 成礼 / 大礼”三档周礼体文案。
-- 支持“温言相劝 / 大儒辩经 / 强行圆场 / 痛心疾首”四种辞气。
-- 在没有配置 DeepSeek Key 时自动使用本地演示文案，便于预览界面。
-- 提供一键复制和 ZIP 下载的 `speak-zhouli` Skill。
-- 支持生成可保存的礼帖图片。
+![合乎周礼界面预览](public/images/zhouli-assembly.webp)
 
-## 本地运行
+## What Is This
+
+`合乎周礼` 是一个中文梗文案生成器。它把普通中文改写成“大周礼时代”流行的
+白话翻译腔：先讲一个看似古代的道理，再把现代小事放进礼法、名分、职分和体
+面里一本正经地论证。
+
+在线版本：[hehuzhouli.com](https://hehuzhouli.com)
+
+这个仓库包含：
+
+- Next.js 网站源码。
+- `/api/translate` 服务端生成接口。
+- DeepSeek Chat Completions 调用逻辑。
+- 周礼体提示词构造与清洗规则。
+- 可复制、可下载的 `speak-zhouli` Skill 包。
+- 礼帖图片生成与下载逻辑。
+
+仓库不包含真实 API Key、私有日志、线上账号凭据或生产平台的安全配置。
+
+## Highlights
+
+| Capability | Detail |
+| --- | --- |
+| 三档礼数 | 小礼、成礼、大礼，覆盖短评到长文 |
+| 四种辞气 | 温言相劝、大儒辩经、强行圆场、痛心疾首 |
+| 演示模式 | 没有 API Key 时仍可预览界面与交互 |
+| Skill 分发 | 支持一键复制 Skill 全文和 ZIP 下载 |
+| 图片礼帖 | 将生成结果保存为适合传播的图片 |
+| 公开前审计 | 内置脚本扫描明显密钥与私钥块 |
+
+## Example
+
+Input:
+
+```text
+疯狂星期四，谁愿请我一食才合乎周礼
+```
+
+Output style:
+
+```text
+我听闻，古人设宴，并非只为一餐之饱，也是借饭食来观朋友情义。今日正逢星期四，我开口求一食，看似嘴馋，其实是在给诸位一个行仁义、修情分的机会。若有人愿意请客，便不是破费，而是以鸡会友，这难道不也合乎周礼吗？
+```
+
+## Quick Start
+
+Requirements:
+
+- Node.js 20 or newer.
+- A DeepSeek API key for real generation.
+
+Run locally:
 
 ```bash
 npm install
@@ -22,9 +83,9 @@ cp .env.example .env.local
 npm run dev
 ```
 
-打开 [http://localhost:3000](http://localhost:3000)。
+Open [http://localhost:3000](http://localhost:3000).
 
-`.env.local` 示例：
+`.env.local`:
 
 ```env
 DEEPSEEK_API_KEY=sk-your-key-here
@@ -32,37 +93,64 @@ DEEPSEEK_MODEL=deepseek-v4-flash
 MAX_OUTPUT_TOKENS=720
 ```
 
-如果没有配置 `DEEPSEEK_API_KEY`，项目会走演示模式，不会请求 DeepSeek。
+If `DEEPSEEK_API_KEY` is missing, the app falls back to local demo output and
+does not call DeepSeek.
 
-## DeepSeek 配置
+## Project Structure
 
-项目默认：
+```text
+app/
+  api/translate/route.ts       Server-side generation endpoint
+  page.tsx                     Main UI and card export flow
+lib/
+  prompt.ts                    Prompt assembly and perspective rules
+  cardDownload.ts              Unique card download filenames
+public/
+  downloads/                   Public Skill assets
+  images/                      README and website images
+scripts/
+  public-audit.mjs             Public-release secret scan
+  run-zhouli-batch.mjs         Batch regression runner
+skill-package/
+  speak-zhouli/                Source Skill package
+```
 
-- 使用 `deepseek-v4-flash`。
-- 明确关闭思考模式，降低延迟与成本。
-- 用户输入限制为 300 字。
-- 输出上限由 `MAX_OUTPUT_TOKENS` 控制。
-- 固定提示词放在最前面，便于命中上下文缓存。
-- API Key 只在服务端使用，不会发送给浏览器。
+## DeepSeek Runtime
 
-生产环境请使用平台的 Secret 管理能力保存 `DEEPSEEK_API_KEY`，不要提交真实
-`.env`、`.env.local` 或 `.dev.vars`。
+The production generation path:
 
-## 可下载 Skill
+1. The browser submits text, mode, level, and a client id to `/api/translate`.
+2. The server validates input length, mode, and level.
+3. A lightweight in-memory rate limiter checks the request.
+4. The server builds a fixed system prompt plus a user prompt.
+5. DeepSeek returns a candidate response.
+6. The server cleans common failure patterns before returning JSON.
 
-网站包含一份可独立安装的 `speak-zhouli` Skill：
+Default runtime choices:
 
-- Skill 源文件：`skill-package/speak-zhouli/`
-- 网站下载包：`public/downloads/speak-zhouli-skill.zip`
-- 网站复制原文：`public/downloads/speak-zhouli-SKILL.md`
-- 下载地址：`/downloads/speak-zhouli-skill.zip`
-- 复制原文地址：`/downloads/speak-zhouli-SKILL.md`
+- Model: `deepseek-v4-flash`.
+- Thinking mode: disabled.
+- User input limit: 300 Chinese characters.
+- Output limit: configured by `MAX_OUTPUT_TOKENS`.
+- API Key scope: server only, never sent to the browser.
 
-网页里的“一键复制 Skill 全文”会读取 `speak-zhouli-SKILL.md`，并附上一句聊天框
-使用说明。用户复制后直接粘贴到任意 AI 聊天框即可使用；下载 ZIP 则适合放入
-Codex 的 Skill 目录正式安装。
+For multi-instance production deployments, replace the in-memory rate limiter
+with shared storage such as Redis, Upstash, D1, or KV, and configure platform
+side abuse controls and billing alerts.
 
-修改 Skill 后，需要同步原文并重新生成压缩包：
+## Speak Zhouli Skill
+
+The website ships a standalone `speak-zhouli` Skill:
+
+| Asset | Path |
+| --- | --- |
+| Skill source | `skill-package/speak-zhouli/` |
+| Website copy source | `public/downloads/speak-zhouli-SKILL.md` |
+| Website ZIP download | `public/downloads/speak-zhouli-skill.zip` |
+| Public copy URL | `/downloads/speak-zhouli-SKILL.md` |
+| Public ZIP URL | `/downloads/speak-zhouli-skill.zip` |
+
+After editing the Skill source, rebuild the public assets:
 
 ```bash
 cp skill-package/speak-zhouli/SKILL.md public/downloads/speak-zhouli-SKILL.md
@@ -70,7 +158,9 @@ cd skill-package
 zip -r -X ../public/downloads/speak-zhouli-skill.zip speak-zhouli
 ```
 
-## 测试与公开前审计
+## Quality Checks
+
+Run the same checks used before release:
 
 ```bash
 npm run public:audit
@@ -79,48 +169,32 @@ npm run typecheck
 npm run build
 ```
 
-`npm run public:audit` 会扫描 Git 跟踪的文本文件，检查是否有明显的真实密钥、
-Bearer Token 或私钥块。它不是安全审计的全部，但适合在公开仓库前做最后一道
-机械检查。
+`npm run public:audit` scans Git-tracked text files for obvious API keys,
+literal bearer tokens, private key blocks, and Cloudflare credential
+assignments. It is a guardrail, not a replacement for manual review.
 
-公开仓库前还应确认：
-
-- `git status --short` 干净。
-- `.env.local`、`.dev.vars`、`test-runs/`、`.next/`、`.open-next/`、
-  `.wrangler/`、`node_modules/` 没有被 Git 跟踪。
-- GitHub visibility 需由维护者手动切换；本仓库不会自动改成 public。
-
-## 批量回归测试
-
-公开仓库中提供了一个小样本：
+Batch regression runner:
 
 ```bash
 ZHOULI_TEST_ENDPOINT=http://localhost:3000/api/translate \
   node scripts/run-zhouli-batch.mjs
 ```
 
-如需使用自己的历史样本，可以传入同结构 JSON 文件：
+Use a private baseline by passing a compatible JSON file:
 
 ```bash
 node scripts/run-zhouli-batch.mjs test-runs/your-baseline.json
 ```
 
-`test-runs/` 默认被忽略，适合存放私有回归样本和真实调用结果。
+`test-runs/` is ignored by Git and is intended for private regression samples
+and real API outputs.
 
-## 限流说明
-
-当前包含轻量的内存限流，适合本地开发、单实例部署和早期验证。多实例
-Serverless 或较大流量场景应改用 Redis、Upstash、D1、KV 等共享存储，并在部署
-平台设置费用告警与额外防刷策略。
-
-## 部署
+## Deployment
 
 ### Cloudflare Workers
 
-这个项目有 `/api/translate` 服务端接口，推荐用 Cloudflare Workers + OpenNext
-部署，而不是只部署静态页面。
-
-首次部署：
+This project has a server endpoint, so Cloudflare Workers + OpenNext is the
+recommended Cloudflare path.
 
 ```bash
 npm install
@@ -129,30 +203,23 @@ npx wrangler secret put DEEPSEEK_API_KEY
 npm run deploy
 ```
 
-部署成功后会得到一个 `workers.dev` 公网地址。生产环境建议绑定自定义域名，并
-根据流量情况配置平台侧限流、告警和费用保护。
-
-本地预览 Workers 运行时：
+Local Workers preview:
 
 ```bash
 cp .env.example .dev.vars
 npm run preview
 ```
 
-注意不要把真实 `DEEPSEEK_API_KEY` 提交到 Git；生产环境使用 `wrangler secret put`
-写入 Cloudflare Secret。
-
-如果主要用户来自中国大陆普通网络，Cloudflare 可以作为快速上线验证版，但访问
-速度和稳定性不能保证。更稳的大陆正式版通常需要国内云服务与域名备案。
+Do not commit real `.env`, `.env.local`, or `.dev.vars` files. Production
+secrets should be stored with the hosting platform's secret manager.
 
 ### Vercel
 
-1. 将项目推送至 GitHub。
-2. 在 Vercel 导入仓库。
-3. 添加 `DEEPSEEK_API_KEY` 等环境变量。
-4. 点击 Deploy。
+1. Import the repository into Vercel.
+2. Add `DEEPSEEK_API_KEY`, `DEEPSEEK_MODEL`, and `MAX_OUTPUT_TOKENS`.
+3. Deploy.
 
-### 自有服务器
+### Self-Hosted Node
 
 ```bash
 npm install
@@ -160,9 +227,29 @@ npm run build
 npm run start
 ```
 
-生产环境建议使用 PM2 或 systemd 托管，并在前方配置 Nginx 与 HTTPS。
+For production, run behind HTTPS and a process manager such as PM2 or systemd.
 
-## 许可证
+## Security Notes
 
-MIT License。欢迎学习、修改和二次创作；如果项目对你有帮助，欢迎保留出处并
-给原仓库一个 Star。
+- Never commit real API keys or platform tokens.
+- Keep private request logs and batch outputs outside Git.
+- Add shared rate limiting before high-traffic public deployments.
+- Configure billing alerts on the model provider and hosting platform.
+- Review [OPEN_SOURCE.md](OPEN_SOURCE.md) before changing repository visibility.
+
+## Contributing
+
+Issues and pull requests are welcome. Useful contributions include:
+
+- Better prompt tests and regression samples.
+- More robust safety and perspective handling.
+- UI accessibility fixes.
+- Deployment recipes for other platforms.
+- Documentation improvements for new users.
+
+Please run `npm run public:audit`, `npm test`, `npm run typecheck`, and
+`npm run build` before opening a pull request.
+
+## License
+
+MIT License. See [LICENSE](LICENSE).
